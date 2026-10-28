@@ -1,0 +1,12 @@
+# helm install tempo grafana/tempo -n monitoring -f values.yaml
+# helm upgrade tempo grafana/tempo -n monitoring -f values.yaml
+tempo:
+  metricsGenerator:
+    enabled: true
+    remoteWriteUrl: "http://prometheus-kube-prometheus-prometheus.monitoring.svc:9090/api/v1/write"
+  overrides:
+    defaults:
+      metrics_generator:
+        processors:
+          - service-graphs
+          - span-metrics

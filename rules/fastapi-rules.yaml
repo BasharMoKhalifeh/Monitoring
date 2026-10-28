@@ -1,0 +1,19 @@
+apiVersion: monitoring.coreos.com/v1
+kind: PrometheusRule
+metadata:
+  name: fastapi-rules
+  namespace: monitoring
+  labels:
+    release: prometheus        # required, see below
+spec:
+  groups:
+    - name: FastApi.rules
+      rules:
+        - alert: FastApiDown
+          expr: up{job="fastapi-app"} == 0 or absent(up{job="fastapi-app"})
+          for: 5s
+          labels:
+            severity: critical
+          annotations:
+            summary: "FastAPI app is down"
+            description: "Target {{ $labels.job }} in namespace {{ $labels.namespace }} is unreachable."

@@ -1,0 +1,89 @@
+# helm repo add grafana https://grafana-community.github.io/helm-charts
+# helm repo update
+# helm install alloy grafana/alloy --values alloy-values.yaml -n monitoring
+
+
+
+# alloy-values.yaml
+controller:
+  type: daemonset
+
+alloy:
+  extraPorts:
+    - name: otlp-grpc
+      port: 4317
+      targetPort: 4317
+      protocol: TCP
+    - name: otlp-http
+      port: 4318
+      targetPort: 4318
+      protocol: TCP
+  configMap:
+    content: |-
+      discovery.kubernetes "pod" {
+        role = "pod"
+      }
+
+      discovery.relabel "pod_logs" {
+        targets = discovery.kubernetes.pod.targets
+
+        rule {
+          source_labels = ["__meta_kubernetes_namespace"]
+          action        = "replace"
+          target_label  = "namespace"
+        }
+        rule {
+          source_labels = ["__meta_kubernetes_pod_name"]
+          action        = "replace"
+          target_label  = "pod"
+        }
+        rule {
+          source_labels = ["__meta_kubernetes_pod_container_name"]
+          action        = "replace"
+          target_label  = "container"
+        }
+        rule {
+          source_labels = ["__meta_kubernetes_pod_label_app"]
+          action        = "replace"
+          target_label  = "app"
+        }
+      }
+
+      loki.source.kubernetes "pod_logs" {
+        targets     = discovery.relabel.pod_logs.output
+        forward_to  = [loki.write.default.receiver]
+      }
+
+      loki.write "default" {
+        endpoint {
+                // Loki service URL (make sure to replace with your actual Loki service URL)
+          url = "http://loki.monitoring.svc.cluster.local:3100/loki/api/v1/push"  
+        }
+      }
+
+
+      // The following configuration is for Tempo, which is a distributed tracing backend. It receives traces in OTLP format and forwards them to the Tempo service.
+      // OTLP receiver configuration
+      otelcol.receiver.otlp "otlp_receiver" {
+        grpc {
+          endpoint = "0.0.0.0:4317"
+        }
+        http {
+          endpoint = "0.0.0.0:4318"
+        }
+        output {
+          traces = [otelcol.exporter.otlp.tempo.input]  // the consumer of the traces is the Tempo exporter
+        }
+      }
+      
+      // OTLP exporter to Tempo
+      otelcol.exporter.otlp "tempo" {
+        client {
+          endpoint = "tempo.monitoring.svc.cluster.local:4317"
+          tls {
+            insecure = true
+            insecure_skip_verify = true
+            
+          }
+        }
+      }

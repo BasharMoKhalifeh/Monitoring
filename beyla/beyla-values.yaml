@@ -1,0 +1,28 @@
+# beyla-values.yaml
+# helm repo add grafana https://grafana.github.io/helm-charts
+# helm repo update
+# helm install beyla grafana/beyla -n monitoring -f beyla-values.yaml
+
+config:
+  data:
+    discovery:
+      instrument:
+        - k8s_namespace: "boutique"          # instrument every namespace...
+      exclude_instrument:
+        - k8s_namespace: kube-system  # ...except those namespcaces
+        - k8s_namespace: monitoring   
+
+    attributes:
+      kubernetes:
+        enable: true                  # adds namespace, pod, deployment, node labels to spans
+
+    otel_traces_export:
+      endpoint: "http://alloy.monitoring.svc.cluster.local:4317"
+      protocol: grpc
+      insecure_skip_verify: true
+
+    # Optional: drop health-check noise
+    # filter:
+    #   application:
+    #     url_path:
+    #       not_match: "/{healthz,readyz,metrics}"

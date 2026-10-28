@@ -601,7 +601,28 @@ global:
     create: true
     createAggregateClusterRoles: false
 grafana:
-  additionalDataSources: []
+  additionalDataSources: 
+    - name: Tempo
+      type: tempo
+      uid: tempo
+      access: proxy
+      url: http://tempo.monitoring.svc.cluster.local:3200
+      jsonData:
+        serviceMap:
+          datasourceUid: prometheus
+        nodeGraph:
+          enabled: true 
+        tracesToLogsV2:
+          datasourceUid: loki
+          spanStartTimeShift: "-5m"
+          spanEndTimeShift: "5m"
+          filterByTraceID: false
+          filterBySpanID: false
+          tags:
+            - key: k8s.namespace.name
+              value: namespace
+            - key: k8s.pod.name
+              value: pod
   additionalDataSourcesString: ""
   admin:
     existingSecret: ""
@@ -878,7 +899,8 @@ grafana:
     accessModes:
     - ReadWriteOnce
     disableWarning: false
-    enabled: false
+    enabled: true
+    storageClassName: longhorn-single-replica
     extraPvcLabels: {}
     finalizers:
     - kubernetes.io/pvc-protection
@@ -1805,7 +1827,7 @@ prometheus:
     enableAdminAPI: false
     enableFeatures: []
     enableOTLPReceiver: false
-    enableRemoteWriteReceiver: false
+    enableRemoteWriteReceiver: true
     enforcedBodySizeLimit: ""
     enforcedKeepDroppedTargets: 0
     enforcedLabelLimit: false
